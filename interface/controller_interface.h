@@ -43,7 +43,6 @@
 *************************************************************************************
 ************************************************************************************/
 
-#include "PWR_Interface.h"
 #include "fsl_xcvr.h"
 #include "fsl_os_abstraction.h"
 #include "Panic.h"
@@ -230,13 +229,13 @@ struct fwk_cfg
 struct dyn_cfg
 {
     // Low power
-    PWR_clock_32k_hk_t* lp_dyn;
+    void*            lp_dyn;
 
     // Flags
     volatile uint8_t flags;
 
     // Seed for firmware's srand()
-    uint32_t fw_seed;
+    uint32_t         fw_seed;
 };
 
 struct ble_config_st

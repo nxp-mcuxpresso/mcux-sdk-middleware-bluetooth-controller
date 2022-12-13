@@ -1,6 +1,6 @@
 /*!
 * Copyright (c) 2015, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2017,2022 NXP
 *
 * \file
 *
@@ -53,11 +53,13 @@
 #include "qnble_config.h"
 #include "ble_general.h"
 #include "controller_interface.h"
+#include "TimersManager.h"
 #if gBleControllerLocalNameSupport
 #include "PDM.h"
 #include "FunctionLib.h"
 #endif
 #include "SecLib.h"
+#include "SecLib_ecp256.h"
 
 #if defined (DUAL_MODE_APP) && (defined (gEnableBleInactivityTimeNotify) && gEnableBleInactivityTimeNotify == 1)
 #define MAC_DYNAMIC_SUPPORT
@@ -142,9 +144,13 @@
 #define APP_EM_BLE_END                   (APP_EM_BLE_RX_BUFFER_OFFSET + CFG_BLE_RX_BUFFER_COUNT * CFG_REG_BLE_EM_RX_BUFFER_SIZE)
 
 
-#define CFG_API_FLAG_HCI                (0x01)
-#define CFG_API_FLAG_FAST_CORRECT       (0x08)
-#define CFG_API_FLAG_DRIFT_FREQ         (0x10)
+#define CFG_API_FLAG_HCI            0x01
+#define CFG_API_FLAG_ACI            0x02
+#define CFG_API_FLAG_NO_ADV_DLY     0x04
+#define CFG_API_FLAG_FAST_CORRECT   0x08
+#define CFG_API_FLAG_DRIFT_FREQ     0x10
+#define CFG_API_FLAG_SLEEP          0x20
+#define CFG_API_FLAG_USE_FRO32K     0x40
 
 /* Sizing of heap for Environment variables */
 #define BLE_HEAP_ENV_CONSTANT           (320)
@@ -598,7 +604,7 @@ void BLE_ControllerConfig(struct ble_config_st *cfg)
     cfg->fwk = &framework_configuration;
     cfg->dyn = &dynamic_configuration;
 
-    cfg->dyn->lp_dyn = PWR_GetHk32kHandle();
+    cfg->dyn->lp_dyn = (void*)TMR_Get32kHandle();
 
     // Set API flags
     cfg->dyn->flags = CFG_API_FLAG_HCI;
@@ -607,8 +613,12 @@ void BLE_ControllerConfig(struct ble_config_st *cfg)
     cfg->dyn->flags |= CFG_API_FLAG_FAST_CORRECT;
 #endif
 
-#if (gClkUseFro32K && gPWR_UseAlgoTimeBaseDriftCompensate)
+#if (gClkUseFro32K)
+    cfg->dyn->flags |= CFG_API_FLAG_USE_FRO32K;
+
+#if (gPWR_UseAlgoTimeBaseDriftCompensate)
     cfg->dyn->flags |= CFG_API_FLAG_DRIFT_FREQ;
+#endif
 #endif
 
     RNG_Init();
