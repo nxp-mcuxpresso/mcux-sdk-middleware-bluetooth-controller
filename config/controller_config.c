@@ -118,8 +118,12 @@
 #define CFG_BLE_TX_BUFFER_COUNT         (CFG_BLE_TX_BUFF_DATA_COUNT)
 /// Total number of elements in the TX Descriptor pool
 #define CFG_BLE_TX_DESC_COUNT           (CFG_BLE_TX_DESC_CNTL_COUNT + CFG_BLE_TX_DESC_ADV_COUNT + CFG_BLE_TX_DESC_DATA_COUNT)
+#if defined(gController_ReducedRxThoughput) && (gController_ReducedRxThoughput == 1)
 /// Number of RX Buffers
+#define CFG_BLE_RX_BUFFER_COUNT         (6)
+#else
 #define CFG_BLE_RX_BUFFER_COUNT         (8)
+#endif /* gController_ReducedRxThoughput */
 /// Number of RX Descriptors
 #define CFG_BLE_RX_DESC_COUNT           (CFG_BLE_RX_BUFFER_COUNT)
 
@@ -189,25 +193,29 @@
 #endif
 
 #ifndef gBleLL_FastCorrect_d
-#define gBleLL_FastCorrect_d         (1)
+#define gBleLL_FastCorrect_d           (1)
 #endif
 
 /* Default configuration working with DK6 Xtal32M - may redefine in app_preinclude.h if needed */
 #ifndef gBleOscWakeDelay_c
-#define gBleOscWakeDelay_c           (24) /* Wait for oscillator number of 30us 32kHz ticks   , was 20-21 seems to give issue on entry to powerdown */
+#define gBleOscWakeDelay_c             (24) /* Wait for oscillator number of 30us 32kHz ticks   , was 20-21 seems to give issue on entry to powerdown */
+#endif
+
+#ifndef gBleOscWakeDelayNoConnection_c
+#define gBleOscWakeDelayNoConnection_c (16)
 #endif
 
 #ifdef DEBUG
-#define gBleSlotAdvance_c            (2) /* -O0 option breaks the performance */
+#define gBleSlotAdvance_c              (2) /* -O0 option breaks the performance */
 #else
 #if gBleLL_FastCorrect_d
 #if (gPWR_SmartFrequencyScaling > 0  || gPWR_CpuClk_48MHz)
-#define gBleSlotAdvance_c            (-1)  /* Need 1 slot at 32MHz with Fast correct*/
+#define gBleSlotAdvance_c              (-1)  /* Need 1 slot at 32MHz with Fast correct*/
 #else
-#define gBleSlotAdvance_c            (0)  /* Need 1 slot at 32MHz with Fast correct*/
+#define gBleSlotAdvance_c              (0)  /* Need 1 slot at 32MHz with Fast correct*/
 #endif
 #else
-#define gBleSlotAdvance_c            (1)  /* Need 1 slot at 32MHz without Fast correct*/
+#define gBleSlotAdvance_c              (1)  /* Need 1 slot at 32MHz without Fast correct*/
 #endif
 
 #endif
@@ -216,19 +224,23 @@
 #ifndef gPWR_BleWakeupTimeOptimDisabled
 #if gBleLL_FastCorrect_d
 #if (gPWR_SmartFrequencyScaling > 0  || gPWR_CpuClk_48MHz)
-#define gBleSlpAlgoDuration          (525)    /* gBleSlotAdvance_c set to -1 ;-) - we save 100u at 48MHz */
+#if NDEBUG
+#define gBleSlpAlgoDuration           (450)
+#else
+#define gBleSlpAlgoDuration           (525)   /* gBleSlotAdvance_c set to -1 ;-) - we save 100u at 48MHz */
+#endif
 #else
 /* WakeReason and LL IRQ called from board.c, only 100us or less can be used (75us does not work) */
-#define gBleSlpAlgoDuration          (0)
+#define gBleSlpAlgoDuration           (0)
 #endif
 #else
 /* If Fast correct is not enabled, need more time to synchronize timebase */
-#define gBleSlpAlgoDuration          (300)
+#define gBleSlpAlgoDuration           (300)
 #endif
 #else
 /* WakeReason and LL IRQ called from PWR.c -> requires additional delay depending on clock frequency
     350 on 32Mhz, 250 on 48Mhz -   values not opimized yet */
-#define gBleSlpAlgoDuration          (350)
+#define gBleSlpAlgoDuration           (350)
 #endif
 #endif
 
@@ -285,6 +297,10 @@ extern int OperationTest_Stop();
 * Private prototypes
 *************************************************************************************
 ********************************************************************************** */
+
+#if defined (cPWR_FullPowerDownMode) && (cPWR_FullPowerDownMode == 1)
+void BleAppEvtNotProgrammedCallback(void);
+#endif
 
 #if gStressTesting_d
 static void dma_test_start(void);
@@ -354,7 +370,6 @@ uint32_t BleComputeDhKey(uint8_t* secret_key, uint8_t* public_key, uint8_t* dh_k
 #endif
 }
 
-
 /*! *********************************************************************************
 *************************************************************************************
 * Public memory declarations
@@ -405,9 +420,9 @@ const struct app_cfg app_configuration = {
     .IoDbgMode                      = gDbgIoCfg_c,
 
 #if gDbgUseLLDiagPort
-        .DiagEna                    = BOARD_DbgDiagEnable,
+    .DiagEna                        = BOARD_DbgDiagEnable,
 #else
-        .DiagEna                    = NULL,
+    .DiagEna                        = NULL,
 #endif
 #if (gEnableBleInactivityTimeNotify == 1)
     .bleInactivityCallback          = BleAppInactivityCallback,
@@ -417,6 +432,11 @@ const struct app_cfg app_configuration = {
     .bleInactivityCallback          = NULL,
     .bleNewActivityCallback         = NULL,
     .bleWakeupEndCallback           = NULL,
+#endif
+#if defined (cPWR_FullPowerDownMode) && (cPWR_FullPowerDownMode == 1)
+    .bleNotifyEvtNotProgrammed      = BleAppEvtNotProgrammedCallback,
+#else
+    .bleNotifyEvtNotProgrammed      = NULL,
 #endif
 #ifdef MAC_DYNAMIC_SUPPORT
     .bleIsDynSlaveProtocolActive    = BleAppIsDynSlaveProtocolActive,
@@ -585,16 +605,54 @@ struct dyn_cfg dynamic_configuration;
 *************************************************************************************
 ********************************************************************************** */
 
+/* Use these API in controller_config.c only */
+void BLE_set_sleep_algo_duration(uint32_t duration);
+void BLE_set_osc_wake_delay(uint32_t wakeup_delay);
+
 #if gStressTesting_d
 static uint32_t dma_buffer[DMA_COPY_SIZE];
 static dma_handle_t g_DMA_Handle;
 #endif
 
+#if defined (cPWR_FullPowerDownMode) && (cPWR_FullPowerDownMode == 1)
+static uint32_t BleSlpAlgoDuration = gBleSlpAlgoDuration;
+static uint32_t BleSlpAlgoDurationMin = 0U;
+#endif
 /*! *********************************************************************************
 *************************************************************************************
 * Public functions
 *************************************************************************************
 ********************************************************************************** */
+
+#if defined (cPWR_FullPowerDownMode) && (cPWR_FullPowerDownMode == 1)
+void BleAppEvtNotProgrammedCallback(void)
+{
+    BleSlpAlgoDurationMin = BleSlpAlgoDuration;
+    BleSlpAlgoDuration += 5U;
+    BLE_set_sleep_algo_duration(BleSlpAlgoDuration);
+}
+
+void BLE_SlpAlgoDurationAdjustement(void)
+{
+    if (BleSlpAlgoDuration > BleSlpAlgoDurationMin + 1U)
+    {
+        BleSlpAlgoDuration -= 1U;
+        BLE_set_sleep_algo_duration(BleSlpAlgoDuration);
+    }
+}
+
+void BLE_OscWakeDelayAdjustement(void)
+{
+    if(BLE_GetNbActiveLink() == 0U)
+    {
+    	BLE_set_osc_wake_delay(gBleOscWakeDelayNoConnection_c);
+    }
+    else
+    {
+    	BLE_set_osc_wake_delay(gBleOscWakeDelay_c);
+    }
+}
+#endif // (cPWR_FullPowerDownMode) && (cPWR_FullPowerDownMode == 1)
 
 /*! @brief Initialize BLE configuration. */
 void BLE_ControllerConfig(struct ble_config_st *cfg)

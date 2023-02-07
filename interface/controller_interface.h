@@ -4,7 +4,7 @@
  ********************************************************************************** */
 /*!
 * Copyright (c) 2014, Freescale Semiconductor, Inc.
-* Copyright 2016-2017 NXP
+* Copyright 2016-2017, 2022 NXP
 *
 * \file
 *
@@ -88,6 +88,8 @@ struct app_cfg
     void (*bleInactivityCallback)(uint32_t time);
     // Callback to signal new activity time
     int (*bleNewActivityCallback)(uint32_t time);
+    // Callback to signal a ble event could not be programmed
+    void (*bleNotifyEvtNotProgrammed)(void);
     // Callback to signal link layer wake up ended
     void (*bleWakeupEndCallback)(void);
     // Callback to get the slave procol state
@@ -326,6 +328,21 @@ uint32_t BLE_TimeBeforeNextBleEvent(void);
  * @brief Force LL to wakeup
  */
 int BLE_SetActive(void);
+
+/*
+ * @brief Get number of Active connections
+ */
+uint8_t BLE_GetNbActiveLink(void);
+
+/*
+ * @brief Adjust sleep algo duration value, decrease the value
+ */
+void BLE_SlpAlgoDurationAdjustement(void);
+
+/*
+ * @brief Adjust the oscillator wake delay value if we do not have an active connection
+ */
+void BLE_OscWakeDelayAdjustement(void);
 
 /************************************************************************************
  ************************************************************************************
