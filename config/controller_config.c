@@ -379,7 +379,7 @@ uint32_t BleComputeDhKey(uint8_t* secret_key, uint8_t* public_key, uint8_t* dh_k
 struct unloaded_area_tag sUnloadedArea __attribute__ ((section (".bss.dontinitinboot")));
 
 /* Controller exchange memory */
-uint32_t rwip_exchange_memory[MEM_ALIGN(APP_EM_BLE_END)]  __attribute__ ((section (".bss.ll_exchange_mem")));
+uint32_t rwip_exchange_memory[MEM_ALIGN(APP_EM_BLE_END)]  __attribute__ ((section (".ll.exchange_mem")));
 
 /* Controller heap memory */
 uint32_t rwip_heap_env[RWIP_CALC_HEAP_LEN(RWIP_HEAP_ENV_SIZE)];         /* Memory allocated for environment variables */
@@ -468,11 +468,6 @@ const struct fw_cfg firmware_configuration = {
     .disable_conn_param_req          = 1,
 #else
     .disable_conn_param_req          = 0,
-#endif
-#if defined (gPWR_AdvertisingInterSlotInt)
-    .adv_pdu_int                    = gPWR_AdvertisingInterSlotInt,
-#else
-    .adv_pdu_int                    = CFG_ADV_PDU_INT,
 #endif
     #if (CFG_CON_DEV_MAX > 0)
     .llc_state                      = llc_state,

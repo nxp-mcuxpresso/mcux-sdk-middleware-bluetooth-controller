@@ -1,5 +1,5 @@
 Release Name: MCUXpresso Software Development Kit (SDK) BLE Controller middleware
-Release Version: 2.6.9
+Release Version: 2.6.10
 Package License: LA_OPT_NXP_Software_License.htm - Additional Distribution License, Section 2.3 applies             
 
 BLE_ControllerLib          version: 9.4.21.5                                

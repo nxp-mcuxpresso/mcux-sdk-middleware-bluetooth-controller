@@ -135,9 +135,6 @@
 #define CFG_LLD_UTIL_MIN_INSTANT_CON_EVT            (6)
 #endif
 
-/*! @brief Minimum time in us between two successive ADV packets */
-#define CFG_ADV_PDU_INT                             (1500)
-
 /*! @brief Sleep Duration Value in periodic wake-up mode */
 #define CFG_MAX_SLEEP_DURATION_PERIODIC_WAKEUP      0x0320  // 0.5s
 

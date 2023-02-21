@@ -112,7 +112,6 @@ struct fw_cfg
     uint16_t  local_sca_ppm;
     uint16_t  lld_util_min_instant_con_evt;
     uint16_t  min_instant_con_evt;
-    uint16_t  adv_pdu_int;
     uint8_t*  llc_state;
 
     // BLE controller heap configuration
