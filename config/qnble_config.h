@@ -135,18 +135,30 @@
 #define CFG_LLD_UTIL_MIN_INSTANT_CON_EVT            (6)
 #endif
 
+/*! @brief Number of BLE slots (625us) per second */
+#define NB_BLE_SLOTS_PER_SEC                        1600U
+
+/*! @brief Number of BLE slots per hour */
+#define NB_BLE_SLOTS_PER_HOUR                       (3600*NB_BLE_SLOTS_PER_SEC)
+
+/*! @brief Max number of BLE slots : greater values cause conversion to 32k ticks to fail */
+#define MAX_SUPPORTED_NB_SLOTS                      (NB_BLE_SLOTS_PER_HOUR*35) /* 35h */
+
 /*! @brief Sleep Duration Value in periodic wake-up mode */
-#define CFG_MAX_SLEEP_DURATION_PERIODIC_WAKEUP      0x0320  // 0.5s
+#define CFG_MAX_SLEEP_DURATION_PERIODIC_WAKEUP      (NB_BLE_SLOTS_PER_SEC/2U)   /* defaults to 500ms */
 
 /*! @brief Sleep Duration Value in external wake-up mode */
-//#define CFG_MAX_SLEEP_DURATION_EXTERNAL_WAKEUP      0x3E80  // 10s
 /*
  * Sleep Duration Value in external wake-up mode
- * 0x3E80 (16000) is a number of 625us slots - so 10s.
- * This value may be extended up to 36h.
- * Values above 600s require a lib controller update.
+ * This value cannot be greater than MAX_SUPPORTED_NB_SLOTS i.e. 35h.
  * */
-#define CFG_MAX_SLEEP_DURATION_EXTERNAL_WAKEUP      (0x3E80*8640)  /* 24h - 86400s */
+#define CFG_MAX_SLEEP_DURATION_EXTERNAL_WAKEUP      (NB_BLE_SLOTS_PER_HOUR*24)  /* default to 24h */
+
+
+#if (CFG_MAX_SLEEP_DURATION_EXTERNAL_WAKEUP > MAX_SUPPORTED_NB_SLOTS)
+/* Prevent erroneous configuration that could lead to assert of bad execution in BLE controller library */
+#error "Sleep duration larger than 35h is unsupported"
+#endif
 
 #define CFG_HEAP_NON_RET_SIZE                       (0)
 
